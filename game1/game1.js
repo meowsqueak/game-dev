@@ -2,6 +2,8 @@
 var MAX_SPIN_RATE = 5.0;   // degrees per update
 var SPAWN_INTERVAL_FACTOR = 0.95;   // spawn interval change per spawn
 var BULLET_FIRE_RATE = 0.5;  // time between bullets
+var INITIAL_ENEMY_SPAWN_INTERVAL = 4.0;
+var PLAYER_SPEED = 250.0;
 
 var GameStates = {};
 
@@ -19,7 +21,7 @@ GameStates.Running = function(game) {
 //    this.explosion2;
 
     // number of seconds between each enemy
-    this.spawn_interval = 4.0;
+    this.spawn_interval = INITIAL_ENEMY_SPAWN_INTERVAL;
 };
 
 GameStates.Running.prototype = {
@@ -41,8 +43,8 @@ GameStates.Running.prototype = {
 
     create: function () {
 
-        this.explosion1 = this.add.audio('explosion1');
-        this.explosion2 = this.add.audio('explosion2');
+//        this.explosion1 = this.add.audio('explosion1');
+//        this.explosion2 = this.add.audio('explosion2');
 
         //  Being mp3 files these take time to decode, so we can't play them instantly
         //  Using setDecodedCallback we can be notified when they're ALL ready for use.
@@ -58,26 +60,26 @@ GameStates.Running.prototype = {
         this.background = this.add.tileSprite(0, 0, 1024, 1024, 'background');
 
         // The player and its settings
-        player = this.add.sprite(game.world.width / 2, game.world.height - 60, 'triangle');
-        this.physics.arcade.enable(player);
-        player.anchor.setTo(0.5, 0.5);
-        player.body.gravity.y = 0;
-        player.body.collideWorldBounds = true;
+        this.player = this.add.sprite(this.world.width / 2, this.world.height - 60, 'triangle');
+        this.physics.arcade.enable(this.player);
+        this.player.anchor.setTo(0.5, 0.5);
+        this.player.body.gravity.y = 0;
+        this.player.body.collideWorldBounds = true;
 
         // enemies will be part of this group
-        enemy_group = this.add.group();
-        enemy_group.enableBody = true;
+        this.enemy_group = this.add.group();
+        this.enemy_group.enableBody = true;
 
         // bullet group properties
-        bullet_group = this.add.group();
-        bullet_group.enableBody = true;
+        this.bullet_group = this.add.group();
+        this.bullet_group.enableBody = true;
 
         // explosion group properties
-        explosion_group = this.add.group();
-        explosion_group.enableBody = true;
+        this.explosion_group = this.add.group();
+        this.explosion_group.enableBody = true;
 
         // controls
-        cursors = this.input.keyboard.createCursorKeys();
+        this.cursors = this.input.keyboard.createCursorKeys();
 
         // score display
         this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#0000FF' });
@@ -95,11 +97,11 @@ GameStates.Running.prototype = {
         this.player.body.velocity.x = 0;
         if (this.cursors.left.isDown)
         {
-            player.body.velocity.x = -250;
+            this.player.body.velocity.x = -PLAYER_SPEED;
         }
         else if (this.cursors.right.isDown)
         {
-            player.body.velocity.x = 250;
+            this.player.body.velocity.x = PLAYER_SPEED;
         }
 
         // randomly spawn a new enemy
@@ -124,7 +126,7 @@ GameStates.Running.prototype = {
             }
 
             // kill enemies that have fallen past the player
-            if (item.y > player.y + 100)
+            if (item.y > this.player.y + 100)
             {
                 item.destroy();
 
@@ -144,7 +146,7 @@ GameStates.Running.prototype = {
     spawnBullet: function () {
         if (!this.bullet_cooldown)
         {
-            bullet = bullet_group.create(player.x, player.y, 'square');
+            bullet = this.bullet_group.create(this.player.x, this.player.y, 'square');
             bullet.anchor.setTo(0.5, 0.5);
             bullet.body.gravity.y = 0;
             bullet.body.velocity.y = -500;
@@ -169,7 +171,7 @@ GameStates.Running.prototype = {
         var horiz = this.score;
 
         var x = this.rnd.integerInRange(8, game.world.width - 32);
-        var enemy = enemy_group.create(x, -100, 'pentagon');
+        var enemy = this.enemy_group.create(x, -100, 'pentagon');
         enemy.anchor.setTo(0.5, 0.5);
         enemy.body.gravity.y = 100 + this.rnd.integerInRange(-50, 50);
         enemy.body.velocity.x = this.rnd.normal() * horiz;
@@ -184,8 +186,8 @@ GameStates.Running.prototype = {
 
     playerHit: function () {
 
-        this.createExplosion('explosionB', player);
-        player.kill();
+        this.createExplosion('explosionB', this.player);
+        this.player.kill();
 
         // game over
         this.state.start('GameOver', false, false, this.score);
@@ -208,7 +210,7 @@ GameStates.Running.prototype = {
     },
 
     createExplosion: function (type, object) {
-        var explosion = explosion_group.create(object.x, object.y, type);
+        var explosion = this.explosion_group.create(object.x, object.y, type);
         explosion.anchor.setTo(0.5, 0.5);
         explosion.body.gravity = object.body.gravity;
         explosion.body.velocity.y = object.body.velocity.y / 2.0;
@@ -251,13 +253,24 @@ GameStates.GameOver.prototype = {
         var style = { font: "65px Arial", fill: "#ff0044", align: "center" };
         var text = this.add.text(this.world.centerX, this.world.centerY, "Game Over\nScore " + this.score, style);
         text.anchor.set(0.5);
+
+        var style2 = { font: "31px Arial", fill: "#ff0044", align: "center" };
+        var text2 = this.add.text(this.world.centerX, this.world.centerY + 128, "Hit Space to Restart", style2);
+        text2.anchor.set(0.5);
+
+        restart = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        restart.onDown.add(this.keyDown, this);
     },
     update: function () {
-        if (cursors.up.isDown)
-        {
-            this.state.start('Running');
-        }
-    }
+    },
+    keyDown: function (self) {
+        this.state.start('Running');
+        //console.log(game.input.keyboard.event.keyCode);
+    },
+    render: function () {
+        //game.debug.text("Debug: " + this.score.toString(), 16, 16);
+    },
+
 };
 
 
