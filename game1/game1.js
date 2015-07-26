@@ -53,6 +53,7 @@ GameStates.Running = function(game) {
     this.bullet_cooldown = false;
     this.explosion_group;
     this.score = 0;
+    this.high_score = 0;
     this.scoreText;
     this.background;
     this.explosion1;
@@ -131,7 +132,7 @@ GameStates.Running.prototype = {
 
         // score display
         this.score = 0;
-        this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#0000FF' });
+        this.scoreText = this.add.text(16, 16, 'Score: 0\nHigh: ' + this.high_score, { fontSize: '32px', fill: '#0000FF' });
 
         // start with an enemy
         this.spawnEnemy();
@@ -334,7 +335,8 @@ GameStates.Running.prototype = {
 
     updateScore: function (amount) {
         this.score = Math.ceil(Math.max(0, this.score + amount));
-        this.scoreText.text = 'Score: ' + this.score;
+        this.high_score = Math.max(this.score, this.high_score);
+        this.scoreText.text = 'Score: ' + this.score + '\nHigh: ' + this.high_score;
     },
 
     render: function () {
