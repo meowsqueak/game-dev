@@ -12,15 +12,49 @@ var ENEMY_MAX_X_VELOCITY = 500.0;
 var GameStates = {};
 
 // TODO:
-//  fix music playing multiple times - DONE
-//  score adjust for asteroid size
-//  side-collision between enemy and rocket causes crash
+//  Fix music playing multiple times - DONE
+//  Phaser.Cache.isSoundDecoded cache miss
+//  Score adjust for asteroid size
+//  Side-collision between enemy and rocket causes crash
+//  Add touch controls for iPad
 
 GameStates.Boot = function(game) {
 };
 
 GameStates.Boot.prototype = {
     preload: function () {
+        // load just the loading sprite
+        this.load.image('loading', 'assets/loading.png');
+    },
+    create: function () {
+    },
+    update: function () {
+        this.game.state.start('Preload');
+    },
+};
+
+GameStates.Preload = function(game) {
+};
+
+GameStates.Preload.prototype = {
+    preload: function () {
+        this.load.image('background', 'assets/background.png');
+        this.load.image('player', 'assets/player.png');
+        this.load.image('asteroid1', 'assets/asteroid1.png');
+        this.load.image('asteroid2', 'assets/asteroid2.png');
+        this.load.image('asteroid3', 'assets/asteroid3.png');
+        this.load.image('rocket', 'assets/rocket.png');
+        this.load.image('flame', 'assets/flame.png');
+
+        this.load.spritesheet('explosionA', 'assets/Exp_type_A.png', 128, 128);
+        this.load.spritesheet('explosionB', 'assets/Exp_type_B.png', 192, 192);
+        this.load.spritesheet('explosionC', 'assets/Exp_type_C.png', 256, 256);
+
+        // sound effects
+        this.load.audio('explosion1', 'assets/audio/explosion1.ogg');
+        this.load.audio('explosion2', 'assets/audio/explosion2.ogg');
+        this.load.audio('rocket',     'assets/audio/rocket.ogg');
+
         //  To load an audio file use the following structure.
         //  As with all load operations the first parameter is a unique key, which must be unique between all audio files.
 
@@ -33,14 +67,23 @@ GameStates.Boot.prototype = {
         //this.load.audio('boden', ['assets/audio/bodenstaendig_2000_in_rock_4bit.mp3', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg']);
 
         //  If you know you only need to load 1 type of audio file, you can pass a string instead of an array, like this:
-        this.load.audio('boden', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg');
+        this.load.audio('music', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg');
+
+        // automatic preload bar (not working?)
+        this.preloadBar = this.add.sprite(this.game.world.width/2, this.game.world.height/2, 'loading');
+        this.preloadBar.anchor.setTo(0.5, 0.5);
+        this.load.setPreloadSprite(this.preloadBar);
     },
     create: function () {
-        // start music
-        music = game.sound.play('boden');
     },
     update: function () {
-        this.state.start('Start');
+        // wait until music is decoded
+        if (this.cache.isSoundDecoded('music'))
+        {
+            // start music
+            music = game.sound.play('music');
+            this.game.state.start('Start');
+        }
     },
 };
 
@@ -49,7 +92,6 @@ GameStates.Start = function(game) {
 
 GameStates.Start.prototype = {
     preload: function () {
-        this.load.image('background', 'assets/background.png');
     },
     create: function () {
         this.background = this.add.tileSprite(0, 0, 1024, 1024, 'background');
@@ -72,7 +114,7 @@ GameStates.Start.prototype = {
     update: function () {
     },
     keyDown: function (self) {
-        this.state.start('Running', true, true);
+        this.game.state.start('Running');
     },
 };
 
@@ -98,24 +140,6 @@ GameStates.Running = function(game) {
 GameStates.Running.prototype = {
 
     preload: function () {
-        this.load.image('background', 'assets/background.png');
-//        this.load.image('square', 'assets/red_square.png');
-        this.load.image('player', 'assets/player.png');
-//        this.load.image('pentagon', 'assets/green_pentagon.png');
-        this.load.image('asteroid1', 'assets/asteroid1.png');
-        this.load.image('asteroid2', 'assets/asteroid2.png');
-        this.load.image('asteroid3', 'assets/asteroid3.png');
-        this.load.image('rocket', 'assets/rocket.png');
-        this.load.image('flame', 'assets/flame.png');
-
-        this.load.spritesheet('explosionA', 'assets/Exp_type_A.png', 128, 128);
-        this.load.spritesheet('explosionB', 'assets/Exp_type_B.png', 192, 192);
-        this.load.spritesheet('explosionC', 'assets/Exp_type_C.png', 256, 256);
-
-        // sound effects
-        this.load.audio('explosion1', 'assets/audio/explosion1.ogg');
-        this.load.audio('explosion2', 'assets/audio/explosion2.ogg');
-        this.load.audio('rocket',     'assets/audio/rocket.ogg');
     },
 
     create: function () {
@@ -183,13 +207,13 @@ GameStates.Running.prototype = {
         this.player.addChild(this.emitter);
 
         //position the emitter relative to the sprite's anchor location
-        this.emitter.y = -this.player.size.y / 2;
-        this.emitter.x = 0;
+//        this.emitter.y = -this.player.size.y / 2;
+//        this.emitter.x = 0;
 
         // setup options for the emitter
-        this.emitter.lifespan = 100;
-        this.emitter.maxParticleSpeed = new Phaser.Point(50,-100);
-        this.emitter.minParticleSpeed = new Phaser.Point(-50,-200);
+//        this.emitter.lifespan = 100;
+//        this.emitter.maxParticleSpeed = new Phaser.Point(50,-100);
+//        this.emitter.minParticleSpeed = new Phaser.Point(-50,-200);
     },
 
     // cheat
@@ -330,7 +354,7 @@ GameStates.Running.prototype = {
         this.player.kill();
 
         // game over
-        this.state.start('GameOver', false, false, this.score);
+        this.game.state.start('GameOver', false, false, this.score);
     },
 
     enemyHit: function (bullet, enemy) {
@@ -409,7 +433,7 @@ GameStates.GameOver.prototype = {
     update: function () {
     },
     keyDown: function (self) {
-        this.state.start('Running', true, true);
+        this.game.state.start('Running');
         //console.log(game.input.keyboard.event.keyCode);
     },
     render: function () {
@@ -422,6 +446,7 @@ GameStates.GameOver.prototype = {
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '');
 
 game.state.add('Boot', GameStates.Boot);
+game.state.add('Preload', GameStates.Preload);
 game.state.add('Start', GameStates.Start);
 game.state.add('Running', GameStates.Running);
 game.state.add('GameOver', GameStates.GameOver);
