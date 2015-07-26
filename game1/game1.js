@@ -5,11 +5,15 @@ var BULLET_FIRE_RATE = 0.5;  // time between bullets
 var INITIAL_ENEMY_SPAWN_INTERVAL = 4.0;
 var PLAYER_SPEED = 250.0;
 var ENEMY_SPAWN_INTERVAL_ADJUST = 50.0;  // determines how fast enemies speed up against score
+var ENEMY_SCALE_VARIATION = 0.2;
+var ENEMY_SCALE_BASE = 0.3;
+var ENEMY_MAX_X_VELOCITY = 500.0;
 
 var GameStates = {};
 
 // TODO:
-//  fix music playing multiple times
+//  fix music playing multiple times - DONE
+//  score adjust for asteroid size
 //  side-collision between enemy and rocket causes crash
 
 GameStates.Boot = function(game) {
@@ -62,9 +66,14 @@ GameStates.Running.prototype = {
 
     preload: function () {
         this.load.image('background', 'assets/background.png');
-        this.load.image('square', 'assets/red_square.png');
-        this.load.image('triangle', 'assets/purple_triangle.png');
-        this.load.image('pentagon', 'assets/green_pentagon.png');
+//        this.load.image('square', 'assets/red_square.png');
+        this.load.image('player', 'assets/player.png');
+//        this.load.image('pentagon', 'assets/green_pentagon.png');
+        this.load.image('asteroid1', 'assets/asteroid1.png');
+        this.load.image('asteroid2', 'assets/asteroid2.png');
+        this.load.image('asteroid3', 'assets/asteroid3.png');
+        this.load.image('rocket', 'assets/rocket.png');
+
         this.load.spritesheet('explosionA', 'assets/Exp_type_A.png', 128, 128);
         this.load.spritesheet('explosionB', 'assets/Exp_type_B.png', 192, 192);
         this.load.spritesheet('explosionC', 'assets/Exp_type_C.png', 256, 256);
@@ -97,7 +106,7 @@ GameStates.Running.prototype = {
         this.background = this.add.tileSprite(0, 0, 1024, 1024, 'background');
 
         // The player and its settings
-        this.player = this.add.sprite(this.world.width / 2, this.world.height - 60, 'triangle');
+        this.player = this.add.sprite(this.world.width / 2, this.world.height - 60, 'player');
         this.physics.arcade.enable(this.player);
         this.player.anchor.setTo(0.5, 0.5);
         this.player.body.gravity.y = 0;
@@ -119,6 +128,7 @@ GameStates.Running.prototype = {
         this.cursors = this.input.keyboard.createCursorKeys();
 
         // score display
+        this.score = 0;
         this.scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#0000FF' });
 
         // start with an enemy
@@ -192,7 +202,7 @@ GameStates.Running.prototype = {
         {
             this.rocket.play();
 
-            bullet = this.bullet_group.create(this.player.x, this.player.y, 'square');
+            bullet = this.bullet_group.create(this.player.x, this.player.y, 'rocket');
             bullet.anchor.setTo(0.5, 0.5);
             bullet.body.gravity.y = 0;
             bullet.body.velocity.y = -500;
@@ -217,10 +227,27 @@ GameStates.Running.prototype = {
         var horiz = this.score;
 
         var x = this.rnd.integerInRange(8, game.world.width - 32);
-        var enemy = this.enemy_group.create(x, -100, 'pentagon');
+
+        k = Math.abs(this.rnd.normal());
+        if (k < 0.5)
+        {
+            type = 'asteroid1';
+        }
+        else if (k < 0.75)
+        {
+            type = 'asteroid2';
+        }
+        else
+        {
+            type = 'asteroid3';
+        }
+        scale = ENEMY_SCALE_BASE + ENEMY_SCALE_VARIATION * this.rnd.normal();
+
+        var enemy = this.enemy_group.create(x, -100, type);
+        enemy.scale.setTo(scale, scale);
         enemy.anchor.setTo(0.5, 0.5);
         enemy.body.gravity.y = 100 + this.rnd.integerInRange(-50, 50);
-        enemy.body.velocity.x = this.rnd.normal() * horiz;
+        enemy.body.velocity.x = Math.min(this.rnd.normal() * horiz, ENEMY_MAX_X_VELOCITY);
         enemy.spin = this.rnd.normal() * MAX_SPIN_RATE;
 
 //        // reduce the spawn timer a little
@@ -297,7 +324,6 @@ GameStates.GameOver.prototype = {
         this.score = score;
     },
     preload: function () {
-        this.cursors = this.input.keyboard.createCursorKeys();
     },
     create: function () {
         var style = { font: "65px Arial", fill: "#ff0044", align: "center" };
