@@ -4,8 +4,14 @@ var SPAWN_INTERVAL_FACTOR = 0.95;   // spawn interval change per spawn
 var BULLET_FIRE_RATE = 0.5;  // time between bullets
 var INITIAL_ENEMY_SPAWN_INTERVAL = 4.0;
 var PLAYER_SPEED = 250.0;
+var ENEMY_SPAWN_INTERVAL_ADJUST = 50.0;  // determines how fast enemies speed up against score
 
 var GameStates = {};
+
+// TODO:
+//  fix music playing multiple times
+//  side-collision between enemy and rocket causes crash
+
 
 GameStates.Running = function(game) {
     this.player;
@@ -17,8 +23,8 @@ GameStates.Running = function(game) {
     this.score = 0;
     this.scoreText;
     this.background;
-//    this.explosion1;
-//    this.explosion2;
+    this.explosion1;
+    this.explosion2;
 
     // number of seconds between each enemy
     this.spawn_interval = INITIAL_ENEMY_SPAWN_INTERVAL;
@@ -36,15 +42,30 @@ GameStates.Running.prototype = {
         this.load.spritesheet('explosionC', 'assets/Exp_type_C.png', 256, 256);
 
         // sound effects
-//        this.load.audio('explosion1', 'assets/audio/explosion1.ogg');
-//        this.load.audio('explosion2', 'assets/audio/explosion2.mp3');
+        this.load.audio('explosion1', 'assets/audio/explosion1.ogg');
+        this.load.audio('explosion2', 'assets/audio/explosion2.ogg');
+        this.load.audio('rocket',     'assets/audio/rocket.ogg');
 
+        //  To load an audio file use the following structure.
+        //  As with all load operations the first parameter is a unique key, which must be unique between all audio files.
+
+        //  The second parameter is an array containing the same audio file but in different formats.
+        //  In this example the music is provided as an mp3 and a ogg (Firefox will want the ogg for example)
+
+        //  The loader works by checking if the browser can support the first file type in the list (mp3 in this case). If it can, it loads it, otherwise
+        //  it moves to the next file in the list (the ogg). If it can't load any of them the file will error.
+
+        //this.load.audio('boden', ['assets/audio/bodenstaendig_2000_in_rock_4bit.mp3', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg']);
+
+        //  If you know you only need to load 1 type of audio file, you can pass a string instead of an array, like this:
+        this.load.audio('boden', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg');
     },
 
     create: function () {
 
-//        this.explosion1 = this.add.audio('explosion1');
-//        this.explosion2 = this.add.audio('explosion2');
+        this.explosion1 = this.add.audio('explosion1');
+        this.explosion2 = this.add.audio('explosion2');
+        this.rocket = this.add.audio('rocket');
 
         //  Being mp3 files these take time to decode, so we can't play them instantly
         //  Using setDecodedCallback we can be notified when they're ALL ready for use.
@@ -53,6 +74,10 @@ GameStates.Running.prototype = {
 //    },
 
 //    create2: function () {
+
+        // music
+        music = game.sound.play('boden');
+
         // enable the Arcade Physics system
         this.physics.startSystem(Phaser.Physics.ARCADE);
 
@@ -86,6 +111,15 @@ GameStates.Running.prototype = {
 
         // start with an enemy
         this.spawnEnemy();
+
+        // install cheat
+        //boost = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        //boost.onDown.add(this.boostScore, this);
+    },
+
+    // cheat
+    boostScore: function () {
+        this.updateScore(100);
     },
 
     update: function () {
@@ -109,9 +143,6 @@ GameStates.Running.prototype = {
         if (this.cursors.up.isDown)
         {
             this.spawnBullet();
-            //var enemy = enemy_group.create(game.world.height / 2, 0, 'pentagon');
-            //enemy.body.gravity.y = 100;
-            //this.spawnEnemy();
         }
 
         // rotate enemies as they fall
@@ -136,8 +167,9 @@ GameStates.Running.prototype = {
 
         }, this);
 
-        // background animation
-        this.background.tilePosition.y += 0.2;
+        // background animation, speeds up with score
+        background_speed = Math.max(0.2, this.score / 500.0);
+        this.background.tilePosition.y += background_speed;
 
         // keep player on top
         this.player.bringToTop();
@@ -146,6 +178,8 @@ GameStates.Running.prototype = {
     spawnBullet: function () {
         if (!this.bullet_cooldown)
         {
+            this.rocket.play();
+
             bullet = this.bullet_group.create(this.player.x, this.player.y, 'square');
             bullet.anchor.setTo(0.5, 0.5);
             bullet.body.gravity.y = 0;
@@ -177,8 +211,13 @@ GameStates.Running.prototype = {
         enemy.body.velocity.x = this.rnd.normal() * horiz;
         enemy.spin = this.rnd.normal() * MAX_SPIN_RATE;
 
-        // reduce the spawn timer a little
-        this.spawn_interval = this.spawn_interval * SPAWN_INTERVAL_FACTOR;
+//        // reduce the spawn timer a little
+//        this.spawn_interval = this.spawn_interval * SPAWN_INTERVAL_FACTOR;
+
+        // set the spawn timer based on score
+        this.spawn_interval = INITIAL_ENEMY_SPAWN_INTERVAL / Math.log(Math.E + this.score / ENEMY_SPAWN_INTERVAL_ADJUST)
+        console.log(Math.E);
+        console.log(Math.log(Math.E + this.score / 100.0));
 
         // reset the timer
         this.time.events.add(Phaser.Timer.SECOND * this.spawn_interval, this.spawnEnemy, this);
@@ -186,6 +225,7 @@ GameStates.Running.prototype = {
 
     playerHit: function () {
 
+        this.explosion2.play();
         this.createExplosion('explosionB', this.player);
         this.player.kill();
 
@@ -196,7 +236,7 @@ GameStates.Running.prototype = {
     enemyHit: function (bullet, enemy) {
 
         // play sound
-//        this.explosion1.play();
+        this.explosion1.play();
 
         // create an explosion
         this.createExplosion('explosionA', enemy);
@@ -264,7 +304,7 @@ GameStates.GameOver.prototype = {
     update: function () {
     },
     keyDown: function (self) {
-        this.state.start('Running');
+        this.state.start('Running', true, true);
         //console.log(game.input.keyboard.event.keyCode);
     },
     render: function () {
