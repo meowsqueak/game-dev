@@ -73,6 +73,7 @@ GameStates.Running.prototype = {
         this.load.image('asteroid2', 'assets/asteroid2.png');
         this.load.image('asteroid3', 'assets/asteroid3.png');
         this.load.image('rocket', 'assets/rocket.png');
+        this.load.image('flame', 'assets/flame.png');
 
         this.load.spritesheet('explosionA', 'assets/Exp_type_A.png', 128, 128);
         this.load.spritesheet('explosionB', 'assets/Exp_type_B.png', 192, 192);
@@ -119,6 +120,7 @@ GameStates.Running.prototype = {
         // bullet group properties
         this.bullet_group = this.add.group();
         this.bullet_group.enableBody = true;
+        this.bullet_cooldown = false;
 
         // explosion group properties
         this.explosion_group = this.add.group();
@@ -135,8 +137,27 @@ GameStates.Running.prototype = {
         this.spawnEnemy();
 
         // install cheat
-        boost = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-        boost.onDown.add(this.boostScore, this);
+        //boost = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        //boost.onDown.add(this.boostScore, this);
+
+        // particles...
+
+        //create an emitter
+        this.emitter = this.add.emitter(0, 0, 100);
+        this.emitter.makeParticles('flame');
+        //this.emitter.scale.setTo(0.15, 0.15);
+
+        // Attach the emitter to the sprite
+        this.player.addChild(this.emitter);
+
+        //position the emitter relative to the sprite's anchor location
+        this.emitter.y = -this.player.size.y / 2;
+        this.emitter.x = 0;
+
+        // setup options for the emitter
+        this.emitter.lifespan = 100;
+        this.emitter.maxParticleSpeed = new Phaser.Point(50,-100);
+        this.emitter.minParticleSpeed = new Phaser.Point(-50,-200);
     },
 
     // cheat
@@ -172,8 +193,9 @@ GameStates.Running.prototype = {
             item.angle += item.spin;
 
             // bounce enemies off the sides of the screen
-            if ( (item.x < 32 && item.body.velocity.x < 0) ||
-                 (item.x > this.world.width - 32 && item.body.velocity.x > 0) )
+            half_size = item.width / 2;
+            if ( (item.x < half_size && item.body.velocity.x < 0) ||
+                 (item.x > this.world.width - half_size && item.body.velocity.x > 0) )
             {
                 item.body.velocity.x = -item.body.velocity.x;
             }
@@ -192,6 +214,9 @@ GameStates.Running.prototype = {
         // background animation, speeds up with score
         background_speed = Math.max(0.2, this.score / 500.0);
         this.background.tilePosition.y += background_speed;
+
+        // emit particles
+        //this.emitter.emitParticle();
 
         // keep player on top
         this.player.bringToTop();
@@ -287,7 +312,12 @@ GameStates.Running.prototype = {
     },
 
     createExplosion: function (type, object) {
+        // adjust explosion size based on target size
+        size = Math.max(object.width, object.height) * 2.5;
+
         var explosion = this.explosion_group.create(object.x, object.y, type);
+        explosion.width = size;
+        explosion.height = size;
         explosion.anchor.setTo(0.5, 0.5);
         explosion.body.gravity = object.body.gravity;
         explosion.body.velocity.y = object.body.velocity.y / 2.0;
@@ -357,4 +387,3 @@ game.state.add('Running', GameStates.Running);
 game.state.add('GameOver', GameStates.GameOver);
 
 game.state.start('Boot');
-
