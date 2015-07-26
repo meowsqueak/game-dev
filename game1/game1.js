@@ -12,6 +12,34 @@ var GameStates = {};
 //  fix music playing multiple times
 //  side-collision between enemy and rocket causes crash
 
+GameStates.Boot = function(game) {
+};
+
+GameStates.Boot.prototype = {
+    preload: function () {
+        //  To load an audio file use the following structure.
+        //  As with all load operations the first parameter is a unique key, which must be unique between all audio files.
+
+        //  The second parameter is an array containing the same audio file but in different formats.
+        //  In this example the music is provided as an mp3 and a ogg (Firefox will want the ogg for example)
+
+        //  The loader works by checking if the browser can support the first file type in the list (mp3 in this case). If it can, it loads it, otherwise
+        //  it moves to the next file in the list (the ogg). If it can't load any of them the file will error.
+
+        //this.load.audio('boden', ['assets/audio/bodenstaendig_2000_in_rock_4bit.mp3', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg']);
+
+        //  If you know you only need to load 1 type of audio file, you can pass a string instead of an array, like this:
+        this.load.audio('boden', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg');
+    },
+    create: function () {
+        // start music
+        music = game.sound.play('boden');
+    },
+    update: function () {
+        this.state.start('Running');
+    },
+};
+
 
 GameStates.Running = function(game) {
     this.player;
@@ -46,19 +74,6 @@ GameStates.Running.prototype = {
         this.load.audio('explosion2', 'assets/audio/explosion2.ogg');
         this.load.audio('rocket',     'assets/audio/rocket.ogg');
 
-        //  To load an audio file use the following structure.
-        //  As with all load operations the first parameter is a unique key, which must be unique between all audio files.
-
-        //  The second parameter is an array containing the same audio file but in different formats.
-        //  In this example the music is provided as an mp3 and a ogg (Firefox will want the ogg for example)
-
-        //  The loader works by checking if the browser can support the first file type in the list (mp3 in this case). If it can, it loads it, otherwise
-        //  it moves to the next file in the list (the ogg). If it can't load any of them the file will error.
-
-        //this.load.audio('boden', ['assets/audio/bodenstaendig_2000_in_rock_4bit.mp3', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg']);
-
-        //  If you know you only need to load 1 type of audio file, you can pass a string instead of an array, like this:
-        this.load.audio('boden', 'assets/audio/bodenstaendig_2000_in_rock_4bit.ogg');
     },
 
     create: function () {
@@ -74,9 +89,6 @@ GameStates.Running.prototype = {
 //    },
 
 //    create2: function () {
-
-        // music
-        music = game.sound.play('boden');
 
         // enable the Arcade Physics system
         this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -113,8 +125,8 @@ GameStates.Running.prototype = {
         this.spawnEnemy();
 
         // install cheat
-        //boost = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-        //boost.onDown.add(this.boostScore, this);
+        boost = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        boost.onDown.add(this.boostScore, this);
     },
 
     // cheat
@@ -216,8 +228,6 @@ GameStates.Running.prototype = {
 
         // set the spawn timer based on score
         this.spawn_interval = INITIAL_ENEMY_SPAWN_INTERVAL / Math.log(Math.E + this.score / ENEMY_SPAWN_INTERVAL_ADJUST)
-        console.log(Math.E);
-        console.log(Math.log(Math.E + this.score / 100.0));
 
         // reset the timer
         this.time.events.add(Phaser.Timer.SECOND * this.spawn_interval, this.spawnEnemy, this);
@@ -316,8 +326,9 @@ GameStates.GameOver.prototype = {
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '');
 
+game.state.add('Boot', GameStates.Boot);
 game.state.add('Running', GameStates.Running);
 game.state.add('GameOver', GameStates.GameOver);
 
-game.state.start('Running');
+game.state.start('Boot');
 
