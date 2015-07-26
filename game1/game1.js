@@ -40,7 +40,39 @@ GameStates.Boot.prototype = {
         music = game.sound.play('boden');
     },
     update: function () {
-        this.state.start('Running');
+        this.state.start('Start');
+    },
+};
+
+GameStates.Start = function(game) {
+};
+
+GameStates.Start.prototype = {
+    preload: function () {
+        this.load.image('background', 'assets/background.png');
+    },
+    create: function () {
+        this.background = this.add.tileSprite(0, 0, 1024, 1024, 'background');
+
+        var style = { font: "65px Arial", fill: "#ff0044", align: "center" };
+        var text = this.add.text(this.world.centerX, this.world.centerY - 128, "Zoe Saves The Earth!", style);
+        text.anchor.set(0.5);
+
+        var style = { font: "31px Arial", fill: "#ff0044", align: "center" };
+        var text = this.add.text(this.world.centerX, this.world.centerY, "Left / Right - Move Ship\nUp - Fire Missile", style);
+        text.anchor.set(0.5);
+
+        var style2 = { font: "31px Arial", fill: "#ff0044", align: "center" };
+        var text2 = this.add.text(this.world.centerX, this.world.centerY + 128, "Hit Space to Start", style2);
+        text2.anchor.set(0.5);
+
+        start = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        start.onDown.add(this.keyDown, this);
+    },
+    update: function () {
+    },
+    keyDown: function (self) {
+        this.state.start('Running', true, true);
     },
 };
 
@@ -84,7 +116,6 @@ GameStates.Running.prototype = {
         this.load.audio('explosion1', 'assets/audio/explosion1.ogg');
         this.load.audio('explosion2', 'assets/audio/explosion2.ogg');
         this.load.audio('rocket',     'assets/audio/rocket.ogg');
-
     },
 
     create: function () {
@@ -176,10 +207,16 @@ GameStates.Running.prototype = {
         if (this.cursors.left.isDown)
         {
             this.player.body.velocity.x = -PLAYER_SPEED;
+            this.player.angle = -10;
         }
         else if (this.cursors.right.isDown)
         {
             this.player.body.velocity.x = PLAYER_SPEED;
+            this.player.angle = 10;
+        }
+        else
+        {
+            this.player.angle = 0;
         }
 
         // randomly spawn a new enemy
@@ -385,6 +422,7 @@ GameStates.GameOver.prototype = {
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '');
 
 game.state.add('Boot', GameStates.Boot);
+game.state.add('Start', GameStates.Start);
 game.state.add('Running', GameStates.Running);
 game.state.add('GameOver', GameStates.GameOver);
 
