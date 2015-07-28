@@ -214,6 +214,7 @@ GameStates.Running.prototype = {
 //        this.emitter.lifespan = 100;
 //        this.emitter.maxParticleSpeed = new Phaser.Point(50,-100);
 //        this.emitter.minParticleSpeed = new Phaser.Point(-50,-200);
+
     },
 
     // cheat
@@ -265,7 +266,7 @@ GameStates.Running.prototype = {
             // kill enemies that have fallen past the player
             if (item.y > this.player.y + 100)
             {
-                item.destroy();
+                item.kill();
 
                 // deduct percentage from score
                 this.updateScore(this.score * -0.10);
@@ -279,6 +280,12 @@ GameStates.Running.prototype = {
 
         // emit particles
         //this.emitter.emitParticle();
+
+        // clean up any killed sprites
+        // (do this rather than sprite.destroy() as it can cause crashes due to invalid objects)
+        cleanUpGroup(this.enemy_group);
+        cleanUpGroup(this.bullet_group);
+        cleanUpGroup(this.explosion_group);
 
         // keep player on top
         this.player.bringToTop();
@@ -299,6 +306,11 @@ GameStates.Running.prototype = {
             this.bullet_cooldown = true;
             this.time.events.add(Phaser.Timer.SECOND * BULLET_FIRE_RATE, this.clearBulletFlag, this);
 
+            // enable outOfBounds checking (expensive)
+            bullet.checkWorldBounds = true;
+            // automatically kill the bullet if it goes out of bounds
+            bullet.events.onOutOfBounds.add(this.bulletOutOfBounds, bullet);
+
             // bullets cost points!
             this.updateScore(-5);
         }
@@ -306,6 +318,10 @@ GameStates.Running.prototype = {
 
     clearBulletFlag: function () {
         this.bullet_cooldown = false;
+    },
+
+    bulletOutOfBounds: function (bullet) {
+        bullet.kill();
     },
 
     spawnEnemy: function () {
@@ -369,8 +385,8 @@ GameStates.Running.prototype = {
         score = (enemy.body.velocity.y + enemy.body.velocity.x) / 10.0
         this.updateScore(score);
 
-        bullet.destroy();
-        enemy.destroy();
+        bullet.kill();
+        enemy.kill();
     },
 
     createExplosion: function (type, object) {
@@ -391,7 +407,7 @@ GameStates.Running.prototype = {
     },
 
     explosionAnimationStopped: function (sprite, animation) {
-        sprite.destroy();
+        sprite.kill();
     },
 
     updateScore: function (amount) {
@@ -405,6 +421,25 @@ GameStates.Running.prototype = {
     },
 
 };
+
+// destroy any killed sprites in the group
+// http://davidp.net/phaser-sprite-destroy/
+function cleanUpGroup(group)
+{
+    var aCleanup = [];
+    group.forEachDead(function(item){
+        aCleanup.push(item);
+    });
+
+    var i = aCleanup.length - 1;
+    while(i > -1)
+    {
+        var getitem = aCleanup[i];
+        getitem.destroy();
+        i--;
+    }
+}
+
 
 
 GameStates.GameOver = function(game) {
